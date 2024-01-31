@@ -1,11 +1,11 @@
 # Taskflow
 
 
-Taskflow 是Java语言实现的一个DAG执行引擎，旨在帮助在程序中管理复杂的依赖关系，实现最大程度的并行化执行。
+Taskflow 是Java语言实现的一个轻量级DAG执行引擎，旨在帮助在程序中管理复杂的依赖关系，实现最大程度的并行化执行。
+
 
 # Taskflow 设计与核心原理
 
----
 Taskflow 以非常简明的方式定义图节点与依赖关系，有三个概念：
 * 任务（Task）：真实需要被执行的任务，具体业务逻辑写在。
 * 节点（TaskNode）：DAG中的节点，是任务执行的单元。
@@ -54,10 +54,10 @@ public static void main(String[] args) {
     ExecutorService executorService = Executors.newCachedThreadPool();
     TaskFlow<Integer> flow = new TaskFlow<>(executorService);
     // 创建任务节点
-    TaskNode<Integer> node1 = flow.createNode("n1", new SquareTask());
-    TaskNode<Integer> node2 = flow.createNode("n2", new SquareTask());
-    TaskNode<Integer> node3 = flow.createNode("n3", new SquareTask());
-    TaskNode<Integer> node4 = flow.createNode("n4", new SquareTask());
+    TaskNode<Integer> node1 = flow.createNode("n1", new AddOneTask());
+    TaskNode<Integer> node2 = flow.createNode("n2", new AddOneTask());
+    TaskNode<Integer> node3 = flow.createNode("n3", new AddOneTask());
+    TaskNode<Integer> node4 = flow.createNode("n4", new AddOneTask());
     // 描述依赖关系
     node3.addDependency(node1);
     node3.addDependency(node2);
@@ -93,7 +93,7 @@ digraph taskflow {
 <img width="300" src="https://github.com/peacepanda/taskflow/blob/main/image/image1.png?raw=true" alt="image.png" />
 
 
-# 弱依赖
+# 强弱依赖
 节点的依赖，默认都是强依赖，也就是需要等待所依赖的强依赖节点都完成以后，才可以开始自身节点的逻辑执行。
 还有一种弱依赖，自身节点不用等待弱依赖节点完成，就可以执行自身逻辑，但可以在运行过程中动态获取弱依赖节点的结果（如果没有声明弱依赖关系，不允许动态获取，会抛出错误）。
 
@@ -140,27 +140,27 @@ public class CustomTask implements ITask<Integer> {
 }
 ```
 
-然后在丰富一下DAG，增加n5，n6节点：
+然后再丰富一下DAG，增加n5，n6节点：
 ```java
 public static void main(String[] args) {
         ExecutorService executorService = Executors.newCachedThreadPool();
         TaskFlow<Integer> flow = new TaskFlow<>(executorService);
         // 创建任务节点
-        TaskNode<Integer> node1 = flow.createNode("n1", new SquareTask());
-        TaskNode<Integer> node2 = flow.createNode("n2", new SquareTask());
-        TaskNode<Integer> node3 = flow.createNode("n3", new SquareTask());
-        TaskNode<Integer> node4 = flow.createNode("n4", new SquareTask());
+        TaskNode<Integer> node1 = flow.createNode("n1", new AddOneTask());
+        TaskNode<Integer> node2 = flow.createNode("n2", new AddOneTask());
+        TaskNode<Integer> node3 = flow.createNode("n3", new AddOneTask());
+        TaskNode<Integer> node4 = flow.createNode("n4", new AddOneTask());
         // 描述依赖关系
         node2.addDependency(node1);
         node4.addDependency(node2);
         node4.addDependency(node3);
 
-        TaskNode<Integer> node5 = flow.createNode("n5", new SquareTask());
+        TaskNode<Integer> node5 = flow.createNode("n5", new AddOneTask());
         TaskNode<Integer> node6 = flow.createNode("n6", new CustomTask());
         node6.addWeakDependency(node4);
         node6.addDependency(node5);
 
-        // 在flow.execute种执行，可以设置各节点的默认输入，以及可以实现最大并行化执行
+        // 在flow.execute里面执行，可以设置各节点的默认输入，以及可以实现最大并行化执行
         flow.execute(0, ()->{
             System.out.println("answer:" + node6.get());
         });
@@ -193,7 +193,7 @@ digraph taskflow {
 <img width="300" src="https://github.com/peacepanda/taskflow/blob/main/image/image2.png?raw=true" alt="image.png" />
 
 
-输出结果是 ```answer:2```, 实际上只有n5, n6的节点起作用了。执行的耗时是2秒。
+输出结果是 ```answer:2```, 因为n5输入给n6的是奇数，实际上只有n5, n6的节点起作用了。执行的总耗时是2秒（n5,n6各1秒）。
 
 为了使得n6节点能用到n4节点的结果，我们调整一下依赖关系，增加一个n7节点，并让n5依赖n7：
 ```java
@@ -221,7 +221,7 @@ digraph taskflow {
 <img width="300" src="https://github.com/peacepanda/taskflow/blob/main/image/image3.png?raw=true" alt="image.png" />
 
 
-输出结果是 ```answer:7```, 执行的耗时是4秒。
+输出结果是 ```answer:7```。此时n6上游的输入是2，即偶数，会依赖n4的结果。执行的耗时是4秒。
 
 为什么是4秒？ 回顾下n6节点的核心处理逻辑：
 ```java
@@ -231,5 +231,10 @@ if (result % 2 == 0) {
     result += n4Result;
 }
 ```
-直观上看，n6强依赖的n7，n5运行完毕已经需要2秒，自身执行需要1秒，这时候再临时起意去依赖n4的结果，n4运行完毕需要3秒，应该一共是需要6秒。
-但是，由于代码是放到```flow.execute```里最大化并行执行的，在n7，n5运行的同时，其他节点已经尽可能提前去执行了。所以总耗时减少了。
+直观上看，n6强依赖的n7、n5运行完毕已经需要2秒，这时候再临时起意去依赖n4的结果，n4运行完毕需要3秒，加上n6自身执行需要1秒，应该一共是需要6秒。
+但是，由于代码是放到```flow.execute```里最大化并行执行的，在n7、n5运行的同时，其他节点已经尽可能提前去执行了。所以总耗时减少了。
+
+# 示例
+代码中有两个示例：
+* org.example.simpleDemo： 即上面介绍的例子
+* org.example.protoDemo：使用protobuf作为节点的输入，每个节点在执行前会把上游结果进行pb merge。并模拟了多请求场景下线程池的复用。
