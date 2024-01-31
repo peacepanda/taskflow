@@ -90,7 +90,7 @@ digraph taskflow {
 ```
 可以通过工具看到DAG可视化效果，如 https://dreampuf.github.io/GraphvizOnline
 
-<img width="300" src="/uploads/F39BA6B7027245E9B77151F43CEAB988/image.png" alt="image.png" />
+<img width="300" src="https://github.com/peacepanda/taskflow/blob/main/image/image1.png?raw=true" alt="image.png" />
 
 
 # 弱依赖
@@ -190,7 +190,7 @@ digraph taskflow {
 }
 ```
 
-<img width="300" src="/uploads/E7427738635743C880045D883B109083/image.png" alt="image.png" />
+<img width="300" src="https://github.com/peacepanda/taskflow/blob/main/image/image2.png?raw=true" alt="image.png" />
 
 
 输出结果是 ```answer:2```, 实际上只有n5, n6的节点起作用了。执行的耗时是2秒。
@@ -218,7 +218,7 @@ digraph taskflow {
     "6d311334" [label="n7"];
 }
 ```
-<img width="300" src="/uploads/3FD7A7AAC71B4019B35B5AE59F5CCA09/image.png" alt="image.png" />
+<img width="300" src="https://github.com/peacepanda/taskflow/blob/main/image/image3.png?raw=true" alt="image.png" />
 
 
 输出结果是 ```answer:7```, 执行的耗时是4秒。
