@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package com.example.myapp;
+
+message Person {
+  string name = 1;
+  int32 id = 2;
+  int32 age = 3;
+  int32 gender = 4;
+  string email = 5;
+}
